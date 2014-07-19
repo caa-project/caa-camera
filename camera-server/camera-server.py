@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys, io, time, base64, threading
+import sys, os, io, time, base64, threading
 import tornado.web
 import tornado.websocket
 import tornado.httpserver
@@ -86,11 +86,16 @@ if __name__ == "__main__":
 
     #ハンドラの登録
     #２つのハンドラに同じimg_listを渡しているのに注目！
-    app = tornado.web.Application([
+    handlers = [
         (r"/", HttpHandler),
         (r"/echo", WSSendHandler, dict(img_list=img_list)),
-        (r"/recieve", WSRecieveHandler,dict(img_list=img_list)),
-    ])
+        (r"/recieve", WSRecieveHandler, dict(img_list=img_list)),
+    ]
+    settings = dict(
+            static_path=os.path.join(os.path.dirname(__file__), "static"),
+            )
+    app = tornado.web.Application(handlers, **settings)
     http_server = tornado.httpserver.HTTPServer(app)
-    http_server.listen(8000)
+    port = int(os.environ.get("PORT", 5000))
+    http_server.listen(port)
     tornado.ioloop.IOLoop.instance().start()
