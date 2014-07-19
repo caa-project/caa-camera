@@ -1,16 +1,10 @@
-<html>
-<head>
-<title>livecamera</title>
-<img id="liveImg" src="" width="320" height="240">
-<script type="text/javascript">
 var img = document.getElementById("liveImg");  
 var arrayBuffer;
 
-var url = location.href;
-var adress = url.match( /\/\/[^\/]+/ )[0].substr(2);    //アクセスしてきたアドレス (例 192.168.1.100:1234)
-//WebSocketでサーバに接続
-var ws = new WebSocket("ws://" + adress + "/camera"); 
-ws.binaryType = 'arraybuffer';   //受診するデータがバイナリであるので設定
+var adress = location.href.match( /\/\/[^\/]+/ )[0].substr(2);       //アクセスしてきたアドレス (例 192.168.1.100:1234)
+
+var ws = new WebSocket("ws://" + adress + "/echo"); 
+ws.binaryType = 'arraybuffer';                                       //受信データの設定
 
 ws.onopen = function(){console.log("connection was established");};  //接続が確立した時に呼ばれる
 ws.onmessage = function(evt){
@@ -24,6 +18,7 @@ window.onbeforeunload = function(){
     ws.close(1000);
 };
 
+//base64でのエンコードらしい
 function encode (input) {
     var keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
     var output = "";
@@ -50,6 +45,3 @@ function encode (input) {
     }
     return output;
 }
-</script>
-</head>
-</html>
