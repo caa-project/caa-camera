@@ -77,12 +77,13 @@ class WSRecieveHandler(tornado.websocket.WebSocketHandler):
 
     def on_close(self):
         self.close()
+        self.img_list.append(open("./static/img/default.jpg","rb").read())
         print(self.request.remote_ip, ": connection closed")
 
 if __name__ == "__main__":
     print("start!")
     
-    img_list = [open("./static/img/default.jpg","rb").read()]   #初期画像の用意
+    img_list = []   #画像の受け渡しをするキューとして使うリスト
 
     #ハンドラの登録
     #２つのハンドラに同じimg_listを渡しているのに注目！

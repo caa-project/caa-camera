@@ -6,7 +6,10 @@ var adress = location.href.match( /\/\/[^\/]+/ )[0].substr(2);       //アクセ
 var ws = new WebSocket("ws://" + adress + "/echo"); 
 ws.binaryType = 'arraybuffer';                                       //受信データの設定
 
-ws.onopen = function(){console.log("connection was established");};  //接続が確立した時に呼ばれる
+ws.onopen = function(){
+  img.src = "static/img/default.jpg"
+};
+
 ws.onmessage = function(evt){
 	arrayBuffer = evt.data;
         //受信したデータを復号しbase64でエンコード
