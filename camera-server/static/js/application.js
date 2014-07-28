@@ -7,7 +7,7 @@ var ws = new WebSocket("ws://" + adress + "/echo");
 ws.binaryType = 'arraybuffer';                                       //受信データの設定
 
 ws.onopen = function(){
-  img.src = "static/img/default.jpg"
+  console.log("open!");
 };
 
 ws.onmessage = function(evt){
