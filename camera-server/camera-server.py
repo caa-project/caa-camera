@@ -45,7 +45,7 @@ class WSSendHandler(tornado.websocket.WebSocketHandler):
         self.img_list = img_list
 
     def open(self):
-        # 送信スレッドの作成 
+        # 送信スレッドの作成
         t = threading.Thread(target=self.loop)
         t.setDaemon(True)
         t.start()
@@ -85,10 +85,14 @@ class WSRecieveHandler(tornado.websocket.WebSocketHandler):
 
     def on_close(self):
         self.close()
+        self.img_list.append(open("./static/img/default.jpg", "rb").read())
         print(self.request.remote_ip, ": connection closed")
 
 if __name__ == "__main__":
     print("start!")
+
+    # 画像の受け渡しをするキューとして使うリスト
+    img_list = []
 
     # 初期画像
     img_list = [open("./static/img/default.jpg", "rb").read()]
