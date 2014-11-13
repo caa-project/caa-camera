@@ -1,11 +1,16 @@
+var INDEX = "0";
+function setIndex(s) {
+  INDEX = s;
+}
+
 /**
- * 画像を受信するWebSocketの準備
+ * Prepare WebSocket to receive image buffers.
  */
 function prepareWebSocket() {
   // アクセスしてきたアドレス 例: hoge.com:12345
   var adress = location.href.match( /\/\/[^\/]+/ )[0].substr(2);
 
-  var ws = new WebSocket("ws://" + adress + "/pop"); 
+  var ws = new WebSocket("ws://" + adress + "/pop/" + INDEX); 
   ws.binaryType = 'arraybuffer';
 
   ws.onopen = function(){
@@ -55,3 +60,8 @@ function encode (input) {
     }
     return output;
 }
+
+
+$(function() {
+  prepareWebSocket();
+});
