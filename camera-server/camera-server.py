@@ -19,7 +19,7 @@ class HttpHandler(tornado.web.RequestHandler):
         pass
 
     def get(self):
-        self.render("./templates/index.html")
+        self.render("index.html")
 
 
 class WSSendHandler(tornado.websocket.WebSocketHandler):
@@ -54,7 +54,7 @@ class WSSendHandler(tornado.websocket.WebSocketHandler):
         """メインスレッドと非同期でクライアントに画像を送りつける"""
         while self.state:
             if self.img_list:
-                self.write_message(self.img_list.pop(), binary=True)
+                self.write_message(self.img_list.pop(0), binary=True)
             time.sleep(0.05)
 
     def on_close(self):
@@ -104,8 +104,9 @@ if __name__ == "__main__":
         (r"/send", WSSendHandler, dict(img_list=img_list)),
         (r"/recieve", WSRecieveHandler, dict(img_list=img_list)),
     ]
-    settings = dict(static_path=os.path.join(os.path.dirname(__file__),
-                                             "static"),)
+    settings = dict(
+        template_path=os.path.join(os.path.dirname(__file__), "templates"),
+        static_path=os.path.join(os.path.dirname(__file__), "static"),)
     app = tornado.web.Application(handlers, **settings)
     http_server = tornado.httpserver.HTTPServer(app)
     port = int(os.environ.get("PORT", 5000))

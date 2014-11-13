@@ -1,5 +1,4 @@
 var img = document.getElementById("liveImg");  
-var arrayBuffer;
 
 var adress = location.href.match( /\/\/[^\/]+/ )[0].substr(2);       //アクセスしてきたアドレス (例 192.168.1.100:1234)
 
@@ -10,18 +9,21 @@ ws.onopen = function(){
   console.log("open!");
 };
 
-ws.onmessage = function(evt){
-	arrayBuffer = evt.data;
-        //受信したデータを復号しbase64でエンコード
-	img.src = "data:image/jpeg;base64," + encode(new Uint8Array(arrayBuffer));
+ws.onmessage = function(e){
+	var src = "data:image/jpeg;base64," + encode(new Uint8Array(e.data));
+  $('#liveImg').attr('src', src);
 };
 
 window.onbeforeunload = function(){
-    //ウィンドウ（タブ）を閉じたらサーバにセッションの終了を知らせる
     ws.close(1000);
 };
 
-//base64でのエンコードらしい
+
+/**
+ * base64 encode
+ *
+ * @param input {Uint8Array} binary
+ */
 function encode (input) {
     var keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
     var output = "";
