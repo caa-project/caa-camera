@@ -22,10 +22,10 @@ class HttpHandler(tornado.web.RequestHandler):
         self.render("index.html")
 
 
-class WSSendHandler(tornado.websocket.WebSocketHandler):
-    """画像の送信を担うWebSocketのハンドラ
+class WSPopHandler(tornado.websocket.WebSocketHandler):
+    """ブラウザへの画像の送信
 
-    /sendに対応．
+    /popに対応．
 
     引数にとるimg_listはキューとして用い，受信のハンドラである
     WSRecieveHandlerと同じものを参照している．受信側で画像を積んだらそいつを
@@ -64,7 +64,7 @@ class WSSendHandler(tornado.websocket.WebSocketHandler):
         print("open: " + self.request.remote_ip)
 
 
-class WSRecieveHandler(tornado.websocket.WebSocketHandler):
+class WSPushHandler(tornado.websocket.WebSocketHandler):
     """Piからの画像を受け取るハンドラ
 
     /recieve に対応．
@@ -101,8 +101,8 @@ if __name__ == "__main__":
     # ２つのハンドラに同じimg_listを渡しているのに注目！
     handlers = [
         (r"/", HttpHandler),
-        (r"/send", WSSendHandler, dict(img_list=img_list)),
-        (r"/recieve", WSRecieveHandler, dict(img_list=img_list)),
+        (r"/pop", WSPopHandler, dict(img_list=img_list)),
+        (r"/push", WSPushHandler, dict(img_list=img_list)),
     ]
     settings = dict(
         template_path=os.path.join(os.path.dirname(__file__), "templates"),

@@ -1,22 +1,27 @@
-var img = document.getElementById("liveImg");  
+/**
+ * 画像を受信するWebSocketの準備
+ */
+function prepareWebSocket() {
+  // アクセスしてきたアドレス 例: hoge.com:12345
+  var adress = location.href.match( /\/\/[^\/]+/ )[0].substr(2);
 
-var adress = location.href.match( /\/\/[^\/]+/ )[0].substr(2);       //アクセスしてきたアドレス (例 192.168.1.100:1234)
+  var ws = new WebSocket("ws://" + adress + "/pop"); 
+  ws.binaryType = 'arraybuffer';
 
-var ws = new WebSocket("ws://" + adress + "/echo"); 
-ws.binaryType = 'arraybuffer';                                       //受信データの設定
+  ws.onopen = function(){
+    console.log("open!");
+  };
 
-ws.onopen = function(){
-  console.log("open!");
-};
+  // 受信したバイナリをbase64にしてsrcに指定する
+  ws.onmessage = function(e){
+    var src = "data:image/jpeg;base64," + encode(new Uint8Array(e.data));
+    $('#liveImg').attr('src', src);
+  };
 
-ws.onmessage = function(e){
-	var src = "data:image/jpeg;base64," + encode(new Uint8Array(e.data));
-  $('#liveImg').attr('src', src);
-};
-
-window.onbeforeunload = function(){
+  window.onbeforeunload = function(){
     ws.close(1000);
-};
+  };
+}
 
 
 /**
