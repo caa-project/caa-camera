@@ -1,6 +1,10 @@
-var INDEX = "0";
+var INDEX = "";
+var UI_SERVER_URL = "";
 function setIndex(s) {
   INDEX = s;
+}
+function setUIServerUrl(s) {
+  UI_SERVER_URL = s;
 }
 
 /**
@@ -26,6 +30,21 @@ function prepareWebSocket() {
   window.onbeforeunload = function(){
     ws.close(1000);
   };
+}
+
+/**
+ * QR code
+ */
+function getQRCode() {
+  $.ajax({
+    url: UI_SERVER_URL + "/url/" + INDEX,
+    data: {},
+    success: function(data) {
+      var url = data['url'];
+      var qrcode = "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=" + url;
+      $('#qrCanvas').empty();
+      $('#qrCanvas').append($('<img>').attr('src', qrcode));
+    }});
 }
 
 
@@ -64,4 +83,6 @@ function encode (input) {
 
 $(function() {
   prepareWebSocket();
+
+  $('#qrButton').click(getQRCode);
 });

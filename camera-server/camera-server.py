@@ -1,13 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import gflags
 import os
+import sys
 import time
 import base64
 import threading
 import tornado.web
 import tornado.websocket
 import tornado.httpserver
+
+gflags.DEFINE_integer("port", None, "port the server listen on")
+gflags.DEFINE_string("ui_server_url", "http://localhost:5001", "ui_server_url")
+
+FLAGS = gflags.FLAGS
 
 
 class HttpHandler(tornado.web.RequestHandler):
@@ -19,7 +26,8 @@ class HttpHandler(tornado.web.RequestHandler):
         pass
 
     def get(self, index):
-        self.render("index.html", index=index)
+        self.render("index.html",
+                    index=index, ui_server_url=FLAGS.ui_server_url)
 
 
 class WSPopHandler(tornado.websocket.WebSocketHandler):
@@ -90,7 +98,9 @@ class WSPushHandler(tornado.websocket.WebSocketHandler):
         self.img_list.append(open("./static/img/default.jpg", "rb").read())
         print(self.request.remote_ip, ": connection closed")
 
-if __name__ == "__main__":
+
+def main(argv):
+    argv = gflags.FLAGS(argv)
     print("start!")
 
     # 画像の受け渡しをするキューとして使うリスト
@@ -111,6 +121,14 @@ if __name__ == "__main__":
         static_path=os.path.join(os.path.dirname(__file__), "static"),)
     app = tornado.web.Application(handlers, **settings)
     http_server = tornado.httpserver.HTTPServer(app)
-    port = int(os.environ.get("PORT", 5000))
+    print FLAGS.port
+    if FLAGS.port:
+        port = FLAGS.port
+    else:
+        port = int(os.environ.get("PORT", 5000))
     http_server.listen(port)
     tornado.ioloop.IOLoop.instance().start()
+
+
+if __name__ == '__main__':
+    main(sys.argv)

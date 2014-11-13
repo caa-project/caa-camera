@@ -6,12 +6,15 @@
 <img id="liveImg" src="static/img/default.jpg" width="640" height="480">
 <input id="message" type="TEXT"></input>
 <input id="sendMessage" type="button" value="送信"></input>
-<input type="button" value="QRコードを表示"></input>
+<input id="qrButton" type="button" value="QRコードを表示"></input>
+<div id="qrCanvas"></div>
 
+<a href="http://localhost:5002/url/{{index}}">qrcode</a>
 <script src="../static/js/jquery-2.1.1.min.js"></script>
 <script src="../static/js/application.js"></script>
 <script>
   setIndex("{{index}}");
+  setUIServerUrl("{{ui_server_url}}");
 </script>
 </body>
 </html>
