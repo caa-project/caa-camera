@@ -19,15 +19,15 @@ class HttpHandler(tornado.web.RequestHandler):
         pass
 
     def get(self):
-        self.render("./html/index.html")
+        self.render("./templates/index.html")
 
 
 class WSSendHandler(tornado.websocket.WebSocketHandler):
     """画像の送信を担うWebSocketのハンドラ
 
-    /echo に対応．
+    /sendに対応．
 
-    コンストラクタの引数にとるimg_listはスタックとして用い，受信のハンドラである
+    引数にとるimg_listはキューとして用い，受信のハンドラである
     WSRecieveHandlerと同じものを参照している．受信側で画像を積んだらそいつを
     loop関数の中でpopしてクライアントを送信する．
     """
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     # ２つのハンドラに同じimg_listを渡しているのに注目！
     handlers = [
         (r"/", HttpHandler),
-        (r"/echo", WSSendHandler, dict(img_list=img_list)),
+        (r"/send", WSSendHandler, dict(img_list=img_list)),
         (r"/recieve", WSRecieveHandler, dict(img_list=img_list)),
     ]
     settings = dict(static_path=os.path.join(os.path.dirname(__file__),
