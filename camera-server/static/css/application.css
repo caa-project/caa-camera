@@ -1,0 +1,18 @@
+#chat-text {
+  overflow: auto;
+  height: 500px;
+}
+#headerbg {
+  width:100%;
+  min-width:1000px;
+  background-color:#822222;
+}
+#header {
+  width: 940px;
+  margin-right: auto;
+  margin-left: auto;
+}
+#anglebar {
+    width: auto;
+    display: inline;
+}
