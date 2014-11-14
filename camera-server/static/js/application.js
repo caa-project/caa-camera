@@ -1,27 +1,58 @@
-var img = document.getElementById("liveImg");  
-var arrayBuffer;
+var INDEX = "";
+var UI_SERVER_URL = "";
+function setIndex(s) {
+  INDEX = s;
+}
+function setUIServerUrl(s) {
+  UI_SERVER_URL = s;
+}
 
-var adress = location.href.match( /\/\/[^\/]+/ )[0].substr(2);       //アクセスしてきたアドレス (例 192.168.1.100:1234)
+/**
+ * Prepare WebSocket to receive image buffers.
+ */
+function prepareWebSocket() {
+  // アクセスしてきたアドレス 例: hoge.com:12345
+  var adress = location.href.match( /\/\/[^\/]+/ )[0].substr(2);
 
-var ws = new WebSocket("ws://" + adress + "/echo"); 
-ws.binaryType = 'arraybuffer';                                       //受信データの設定
+  var ws = new WebSocket("ws://" + adress + "/pop/" + INDEX); 
+  ws.binaryType = 'arraybuffer';
 
-ws.onopen = function(){
-  console.log("open!");
-};
+  ws.onopen = function(){
+    console.log("open!");
+  };
 
-ws.onmessage = function(evt){
-	arrayBuffer = evt.data;
-        //受信したデータを復号しbase64でエンコード
-	img.src = "data:image/jpeg;base64," + encode(new Uint8Array(arrayBuffer));
-};
+  // 受信したバイナリをbase64にしてsrcに指定する
+  ws.onmessage = function(e){
+    var src = "data:image/jpeg;base64," + encode(new Uint8Array(e.data));
+    $('#liveImg').attr('src', src);
+  };
 
-window.onbeforeunload = function(){
-    //ウィンドウ（タブ）を閉じたらサーバにセッションの終了を知らせる
+  window.onbeforeunload = function(){
     ws.close(1000);
-};
+  };
+}
 
-//base64でのエンコードらしい
+/**
+ * QR code
+ */
+function getQRCode() {
+  $.ajax({
+    url: UI_SERVER_URL + "/url/" + INDEX,
+    data: {},
+    success: function(data) {
+      var url = data['url'];
+      var qrcode = "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=" + url;
+      $('#qrCanvas').empty();
+      $('#qrCanvas').append($('<img>').attr('src', qrcode));
+    }});
+}
+
+
+/**
+ * base64 encode
+ *
+ * @param input {Uint8Array} binary
+ */
 function encode (input) {
     var keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
     var output = "";
@@ -48,3 +79,10 @@ function encode (input) {
     }
     return output;
 }
+
+
+$(function() {
+  prepareWebSocket();
+
+  $('#qrButton').click(getQRCode);
+});
