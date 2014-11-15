@@ -26,6 +26,12 @@ class ImageHolder(object):
         with open("./static/img/default.jpg", "rb") as f:
             self._default_image = f.read()
 
+    @staticmethod
+    def instance():
+        if not hasattr(ImageHolder, "_instance"):
+            ImageHolder._instance = ImageHolder()
+        return ImageHolder._instance
+
     def push(self, index, buf):
         """画像の追加."""
         with self._lock:
@@ -40,9 +46,24 @@ class ImageHolder(object):
             self._buffer[index] = None
             return buf
 
+    def default_image(self):
+        return self._default_image
+
     def del_index(self, index):
         """キーを削除する"""
         self._buffer.pop(index)
+
+
+class PopHandlerHolder(object):
+
+    def __init__(self):
+        self._hander = dict()
+
+    def get(self, index):
+        return self._handler[index]
+
+    def set(self, index, h):
+        self._handler[index] = h
 
 
 class HttpHandler(tornado.web.RequestHandler):
@@ -64,9 +85,9 @@ class WSPopHandler(tornado.websocket.WebSocketHandler):
     /popに対応．
     """
 
-    def initialize(self, image_holder):
+    def initialize(self):
         self.state = True
-        self.image_holder = image_holder
+        self.image_holder = ImageHolder.instance()
         self.index = None
 
     def open(self, index):
@@ -100,8 +121,8 @@ class WSPushHandler(tornado.websocket.WebSocketHandler):
     画像はbase64でエンコードされて送られてくる（on_messageでバイナリで
     受け取る方法がわからなかったため）．
     """
-    def initialize(self, image_holder):
-        self.image_holder = image_holder
+    def initialize(self):
+        self.image_holder = ImageHolder.instance()
         self.index = None
 
     def open(self, index):
@@ -122,15 +143,12 @@ def main(argv):
     argv = gflags.FLAGS(argv)
     print("start!")
 
-    # 初期画像
-    holder = ImageHolder()
-
     # ハンドラの登録
     # ２つのハンドラに同じimg_listを渡しているのに注目！
     handlers = [
         (r"/watch/([0-9a-zA-Z]+)", HttpHandler),
-        (r"/pop/([0-9a-zA-Z]+)", WSPopHandler, dict(image_holder=holder)),
-        (r"/push/([0-9a-zA-Z]+)", WSPushHandler, dict(image_holder=holder)),
+        (r"/pop/([0-9a-zA-Z]+)", WSPopHandler),
+        (r"/push/([0-9a-zA-Z]+)", WSPushHandler),
     ]
     settings = dict(
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
