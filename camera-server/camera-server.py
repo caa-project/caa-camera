@@ -52,7 +52,7 @@ class PopHandlerHolder(object):
 
     def remove_handler(self, index):
         if index in self._handlers:
-            self._handlers.pop(index)
+            self._handlers[index] = None
 
 
 class HttpHandler(tornado.web.RequestHandler):
@@ -87,7 +87,6 @@ class WSPopHandler(tornado.websocket.WebSocketHandler):
     def on_close(self):
         # 映像送信のループを終了させる
         self.state = False
-        self.close()
         self.pop_hanlder.remove_handler(self.index)
         print("close: " + self.request.remote_ip)
 
@@ -113,7 +112,6 @@ class WSPushHandler(tornado.websocket.WebSocketHandler):
         self.pop_holder.write_message(self.index, buf, binary=True)
 
     def on_close(self):
-        self.close()
         self.pop_holder.write_default()
         print(self.request.remote_ip, ": connection closed")
 
