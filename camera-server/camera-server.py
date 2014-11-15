@@ -50,6 +50,10 @@ class PopHandlerHolder(object):
     def write_default(self, index):
         self.write_message(index, self._default_image, binary=True)
 
+    def remove_handler(self, index):
+        if index in self._handlers:
+            self._handlers.pop(index)
+
 
 class HttpHandler(tornado.web.RequestHandler):
     """HTTPのハンドラ
@@ -73,15 +77,18 @@ class WSPopHandler(tornado.websocket.WebSocketHandler):
     def initialize(self):
         self.state = True
         self.index = None
+        self.pop_hanlder = PopHandlerHolder.instance()
 
     def open(self, index):
         print "pop:", index
-        PopHandlerHolder.instance().set_handler(index, self)
+        self.index = index
+        self.pop_hanlder.set_handler(self.index, self)
 
     def on_close(self):
         # 映像送信のループを終了させる
         self.state = False
         self.close()
+        self.pop_hanlder.remove_handler(self.index)
         print("close: " + self.request.remote_ip)
 
 
