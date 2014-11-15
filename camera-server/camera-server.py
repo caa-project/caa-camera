@@ -17,10 +17,38 @@ gflags.DEFINE_string("ui_server_url", "http://localhost:5001", "ui_server_url")
 FLAGS = gflags.FLAGS
 
 
+class ImageHolder(object):
+    """画像のバッファの入れ物."""
+
+    def __init__(self):
+        self._buffer = dict()
+        self._lock = threading.Lock()
+        with open("./static/img/default.jpg", "rb") as f:
+            self._default_image = f.read()
+
+    def push(self, index, buf):
+        """画像の追加."""
+        with self._lock:
+            self._buffer[index] = buf
+
+    def pop(self, index):
+        """画像を取り出し，Noneをセットする"""
+        with self._lock:
+            if index not in self._buffer:
+                return self._default_image
+            buf = self._buffer[index]
+            self._buffer[index] = None
+            return buf
+
+    def del_index(self, index):
+        """キーを削除する"""
+        self._buffer.pop(index)
+
+
 class HttpHandler(tornado.web.RequestHandler):
     """HTTPのハンドラ
 
-    /に対応．普通にindex.htmlを返す．
+    /watchに対応．普通にindex.htmlを返す．
     """
     def initialize(self):
         pass
@@ -34,25 +62,16 @@ class WSPopHandler(tornado.websocket.WebSocketHandler):
     """ブラウザへの画像の送信
 
     /popに対応．
-
-    引数にとるimg_listはキューとして用い，受信のハンドラである
-    WSRecieveHandlerと同じものを参照している．受信側で画像を積んだらそいつを
-    loop関数の中でpopしてクライアントを送信する．
     """
 
-    def initialize(self, img_list):
-        """コンストラクタ
-
-        @param img_list 画像のリスト
-
-        @memo リストをスタックとして用いている．これをただのオブジェクトとする
-        と，受信のハンドラで代入したときにこちらのオブジェクトと参照している先が
-        異なってしまうので，入れ物を用意する必要があり，とりあえずリストにした．
-        """
+    def initialize(self, image_holder):
         self.state = True
-        self.img_list = img_list
+        self.image_holder = image_holder
+        self.index = None
 
     def open(self, index):
+        print index
+        self.index = index
         # 送信スレッドの作成
         t = threading.Thread(target=self.loop)
         t.setDaemon(True)
@@ -60,42 +79,42 @@ class WSPopHandler(tornado.websocket.WebSocketHandler):
 
     def loop(self):
         """メインスレッドと非同期でクライアントに画像を送りつける"""
-        # TODO: use index
         while self.state:
-            if self.img_list:
-                self.write_message(self.img_list.pop(), binary=True)
+            buf = self.image_holder.pop(self.index)
+            if buf:
+                self.write_message(buf, binary=True)
             time.sleep(0.05)
 
     def on_close(self):
         # 映像送信のループを終了させる
         self.state = False
         self.close()
-        print("open: " + self.request.remote_ip)
+        print("close: " + self.request.remote_ip)
 
 
 class WSPushHandler(tornado.websocket.WebSocketHandler):
     """Piからの画像を受け取るハンドラ
 
-    /recieve に対応．
+    /push に対応．
 
     画像はbase64でエンコードされて送られてくる（on_messageでバイナリで
-    受け取る方法がわからなかったため）．受信したらデコードしてWSSendHandlerと
-    共通のスタックへ積んであげる．
+    受け取る方法がわからなかったため）．
     """
-    def initialize(self, img_list):
-        self.img_list = img_list
+    def initialize(self, image_holder):
+        self.image_holder = image_holder
+        self.index = None
 
     def open(self, index):
         print("open: " + self.request.remote_ip)
+        self.index = index
 
     def on_message(self, msg):
-        """base64で映像を受け取ってデコードしてスタックへ入れる"""
-        # TODO: use index
-        self.img_list.append(base64.b64decode(msg))
+        buf = base64.b64decode(msg)
+        self.image_holder.push(self.index, buf)
 
     def on_close(self):
         self.close()
-        self.img_list.append(open("./static/img/default.jpg", "rb").read())
+        self.image_holder.del_index(self.index)
         print(self.request.remote_ip, ": connection closed")
 
 
@@ -103,29 +122,26 @@ def main(argv):
     argv = gflags.FLAGS(argv)
     print("start!")
 
-    # 画像の受け渡しをするキューとして使うリスト
-    img_list = []
-
     # 初期画像
-    img_list = [open("./static/img/default.jpg", "rb").read()]
+    holder = ImageHolder()
 
     # ハンドラの登録
     # ２つのハンドラに同じimg_listを渡しているのに注目！
     handlers = [
-        (r"/([0-9a-zA-Z]+)", HttpHandler),
-        (r"/pop/([0-9a-zA-Z]+)", WSPopHandler, dict(img_list=img_list)),
-        (r"/push/([0-9a-zA-Z]+)", WSPushHandler, dict(img_list=img_list)),
+        (r"/watch/([0-9a-zA-Z]+)", HttpHandler),
+        (r"/pop/([0-9a-zA-Z]+)", WSPopHandler, dict(image_holder=holder)),
+        (r"/push/([0-9a-zA-Z]+)", WSPushHandler, dict(image_holder=holder)),
     ]
     settings = dict(
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
         static_path=os.path.join(os.path.dirname(__file__), "static"),)
     app = tornado.web.Application(handlers, **settings)
     http_server = tornado.httpserver.HTTPServer(app)
-    print FLAGS.port
     if FLAGS.port:
         port = FLAGS.port
     else:
         port = int(os.environ.get("PORT", 5000))
+    print port
     http_server.listen(port)
     tornado.ioloop.IOLoop.instance().start()
 
