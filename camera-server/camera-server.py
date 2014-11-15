@@ -18,6 +18,7 @@ FLAGS = gflags.FLAGS
 
 
 class ImageHolder(object):
+    """画像のバッファの入れ物."""
 
     def __init__(self):
         self._buffer = dict()
@@ -26,22 +27,28 @@ class ImageHolder(object):
             self._default_image = f.read()
 
     def push(self, index, buf):
+        """画像の追加."""
         with self._lock:
             self._buffer[index] = buf
 
     def pop(self, index):
-        if index not in self._buffer:
-            return self._default_image
+        """画像を取り出し，Noneをセットする"""
         with self._lock:
+            if index not in self._buffer:
+                return self._default_image
             buf = self._buffer[index]
             self._buffer[index] = None
             return buf
+
+    def del_index(self, index):
+        """キーを削除する"""
+        self._buffer.pop(index)
 
 
 class HttpHandler(tornado.web.RequestHandler):
     """HTTPのハンドラ
 
-    /に対応．普通にindex.htmlを返す．
+    /watchに対応．普通にindex.htmlを返す．
     """
     def initialize(self):
         pass
@@ -55,21 +62,9 @@ class WSPopHandler(tornado.websocket.WebSocketHandler):
     """ブラウザへの画像の送信
 
     /popに対応．
-
-    引数にとるimg_listはスタックとして用い，受信のハンドラである
-    WSRecieveHandlerと同じものを参照している．受信側で画像を積んだらそいつを
-    loop関数の中でpopしてクライアントを送信する．
     """
 
     def initialize(self, image_holder):
-        """コンストラクタ
-
-        @param img_list 画像のリスト
-
-        @memo リストをスタックとして用いている．これをただのオブジェクトとする
-        と，受信のハンドラで代入したときにこちらのオブジェクトと参照している先が
-        異なってしまうので，入れ物を用意する必要があり，とりあえずリストにした．
-        """
         self.state = True
         self.image_holder = image_holder
         self.index = None
@@ -94,7 +89,7 @@ class WSPopHandler(tornado.websocket.WebSocketHandler):
         # 映像送信のループを終了させる
         self.state = False
         self.close()
-        print("open: " + self.request.remote_ip)
+        print("close: " + self.request.remote_ip)
 
 
 class WSPushHandler(tornado.websocket.WebSocketHandler):
@@ -103,8 +98,7 @@ class WSPushHandler(tornado.websocket.WebSocketHandler):
     /push に対応．
 
     画像はbase64でエンコードされて送られてくる（on_messageでバイナリで
-    受け取る方法がわからなかったため）．受信したらデコードしてWSSendHandlerと
-    共通のスタックへ積んであげる．
+    受け取る方法がわからなかったため）．
     """
     def initialize(self, image_holder):
         self.image_holder = image_holder
@@ -115,14 +109,12 @@ class WSPushHandler(tornado.websocket.WebSocketHandler):
         self.index = index
 
     def on_message(self, msg):
-        """base64で映像を受け取ってデコードしてスタックへ入れる"""
-        # TODO: use index
         buf = base64.b64decode(msg)
         self.image_holder.push(self.index, buf)
 
     def on_close(self):
         self.close()
-        self.image_holder.push(self.index, None)
+        self.image_holder.del_index(self.index)
         print(self.request.remote_ip, ": connection closed")
 
 
