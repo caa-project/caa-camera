@@ -57,13 +57,22 @@ class ImageHolder(object):
 class PopHandlerHolder(object):
 
     def __init__(self):
-        self._hander = dict()
+        self._handlers = dict()
+        self._lock = threading.Lock()
 
-    def get(self, index):
-        return self._handler[index]
+    @staticmethod
+    def instance():
+        if not hasattr(PopHandlerHolder, "_instance"):
+            PopHandlerHolder._instance = PopHandlerHolder()
+        return PopHandlerHolder._instance
 
-    def set(self, index, h):
-        self._handler[index] = h
+    def get_handler(self, index):
+        if index in self._handlers:
+            return self._handlers[index]
+        return None
+
+    def set_handler(self, index, handler):
+        self._handlers[index] = handler
 
 
 class HttpHandler(tornado.web.RequestHandler):
@@ -97,13 +106,15 @@ class WSPopHandler(tornado.websocket.WebSocketHandler):
         t = threading.Thread(target=self.loop)
         t.setDaemon(True)
         t.start()
+        PopHandlerHolder.instance().set_handler(index, self)
 
     def loop(self):
         """メインスレッドと非同期でクライアントに画像を送りつける"""
         while self.state:
-            buf = self.image_holder.pop(self.index)
-            if buf:
-                self.write_message(buf, binary=True)
+            pass
+            # buf = self.image_holder.pop(self.index)
+            # if buf:
+            #     self.write_message(buf, binary=True)
             time.sleep(0.05)
 
     def on_close(self):
@@ -132,6 +143,9 @@ class WSPushHandler(tornado.websocket.WebSocketHandler):
     def on_message(self, msg):
         buf = base64.b64decode(msg)
         self.image_holder.push(self.index, buf)
+        handler = PopHandlerHolder.instance().get_handler(self.index)
+        if handler:
+            handler.write_message(buf, binary=True)
 
     def on_close(self):
         self.close()
