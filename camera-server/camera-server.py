@@ -35,7 +35,7 @@ class WSPopHandler(tornado.websocket.WebSocketHandler):
 
     /popに対応．
 
-    引数にとるimg_listはキューとして用い，受信のハンドラである
+    引数にとるimg_listはスタックとして用い，受信のハンドラである
     WSRecieveHandlerと同じものを参照している．受信側で画像を積んだらそいつを
     loop関数の中でpopしてクライアントを送信する．
     """
@@ -53,6 +53,7 @@ class WSPopHandler(tornado.websocket.WebSocketHandler):
         self.img_list = img_list
 
     def open(self, index):
+        print index
         # 送信スレッドの作成
         t = threading.Thread(target=self.loop)
         t.setDaemon(True)
@@ -103,7 +104,7 @@ def main(argv):
     argv = gflags.FLAGS(argv)
     print("start!")
 
-    # 画像の受け渡しをするキューとして使うリスト
+    # 画像の受け渡しをするスタックとして使うリスト
     img_list = []
 
     # 初期画像
@@ -121,11 +122,11 @@ def main(argv):
         static_path=os.path.join(os.path.dirname(__file__), "static"),)
     app = tornado.web.Application(handlers, **settings)
     http_server = tornado.httpserver.HTTPServer(app)
-    print FLAGS.port
     if FLAGS.port:
         port = FLAGS.port
     else:
         port = int(os.environ.get("PORT", 5000))
+    print port
     http_server.listen(port)
     tornado.ioloop.IOLoop.instance().start()
 
