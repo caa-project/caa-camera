@@ -52,7 +52,7 @@ class PopHandlerHolder(object):
 
     def remove_handler(self, index):
         if index in self._handlers:
-            self._handlers.pop(index)
+            self._handlers[index] = None
 
 
 class HttpHandler(tornado.web.RequestHandler):
