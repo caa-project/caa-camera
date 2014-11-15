@@ -1,13 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import gflags
 import os
+import sys
 import time
 import base64
 import threading
 import tornado.web
 import tornado.websocket
 import tornado.httpserver
+
+gflags.DEFINE_integer("port", None, "port the server listen on")
+gflags.DEFINE_string("ui_server_url", "http://localhost:5001", "ui_server_url")
+
+FLAGS = gflags.FLAGS
 
 
 class HttpHandler(tornado.web.RequestHandler):
@@ -18,14 +25,15 @@ class HttpHandler(tornado.web.RequestHandler):
     def initialize(self):
         pass
 
-    def get(self):
-        self.render("./templates/index.html")
+    def get(self, index):
+        self.render("index.html",
+                    index=index, ui_server_url=FLAGS.ui_server_url)
 
 
-class WSSendHandler(tornado.websocket.WebSocketHandler):
-    """画像の送信を担うWebSocketのハンドラ
+class WSPopHandler(tornado.websocket.WebSocketHandler):
+    """ブラウザへの画像の送信
 
-    /sendに対応．
+    /popに対応．
 
     引数にとるimg_listはキューとして用い，受信のハンドラである
     WSRecieveHandlerと同じものを参照している．受信側で画像を積んだらそいつを
@@ -44,7 +52,7 @@ class WSSendHandler(tornado.websocket.WebSocketHandler):
         self.state = True
         self.img_list = img_list
 
-    def open(self):
+    def open(self, index):
         # 送信スレッドの作成
         t = threading.Thread(target=self.loop)
         t.setDaemon(True)
@@ -52,6 +60,7 @@ class WSSendHandler(tornado.websocket.WebSocketHandler):
 
     def loop(self):
         """メインスレッドと非同期でクライアントに画像を送りつける"""
+        # TODO: use index
         while self.state:
             if self.img_list:
                 self.write_message(self.img_list.pop(), binary=True)
@@ -64,7 +73,7 @@ class WSSendHandler(tornado.websocket.WebSocketHandler):
         print("open: " + self.request.remote_ip)
 
 
-class WSRecieveHandler(tornado.websocket.WebSocketHandler):
+class WSPushHandler(tornado.websocket.WebSocketHandler):
     """Piからの画像を受け取るハンドラ
 
     /recieve に対応．
@@ -76,11 +85,12 @@ class WSRecieveHandler(tornado.websocket.WebSocketHandler):
     def initialize(self, img_list):
         self.img_list = img_list
 
-    def open(self):
+    def open(self, index):
         print("open: " + self.request.remote_ip)
 
     def on_message(self, msg):
         """base64で映像を受け取ってデコードしてスタックへ入れる"""
+        # TODO: use index
         self.img_list.append(base64.b64decode(msg))
 
     def on_close(self):
@@ -88,7 +98,9 @@ class WSRecieveHandler(tornado.websocket.WebSocketHandler):
         self.img_list.append(open("./static/img/default.jpg", "rb").read())
         print(self.request.remote_ip, ": connection closed")
 
-if __name__ == "__main__":
+
+def main(argv):
+    argv = gflags.FLAGS(argv)
     print("start!")
 
     # 画像の受け渡しをするキューとして使うリスト
@@ -100,14 +112,23 @@ if __name__ == "__main__":
     # ハンドラの登録
     # ２つのハンドラに同じimg_listを渡しているのに注目！
     handlers = [
-        (r"/", HttpHandler),
-        (r"/send", WSSendHandler, dict(img_list=img_list)),
-        (r"/recieve", WSRecieveHandler, dict(img_list=img_list)),
+        (r"/([0-9a-zA-Z]+)", HttpHandler),
+        (r"/pop/([0-9a-zA-Z]+)", WSPopHandler, dict(img_list=img_list)),
+        (r"/push/([0-9a-zA-Z]+)", WSPushHandler, dict(img_list=img_list)),
     ]
-    settings = dict(static_path=os.path.join(os.path.dirname(__file__),
-                                             "static"),)
+    settings = dict(
+        template_path=os.path.join(os.path.dirname(__file__), "templates"),
+        static_path=os.path.join(os.path.dirname(__file__), "static"),)
     app = tornado.web.Application(handlers, **settings)
     http_server = tornado.httpserver.HTTPServer(app)
-    port = int(os.environ.get("PORT", 5000))
+    print FLAGS.port
+    if FLAGS.port:
+        port = FLAGS.port
+    else:
+        port = int(os.environ.get("PORT", 5000))
     http_server.listen(port)
     tornado.ioloop.IOLoop.instance().start()
+
+
+if __name__ == '__main__':
+    main(sys.argv)
