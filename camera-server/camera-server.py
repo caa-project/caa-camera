@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import base64
 import gflags
 import os
 import sys
-import time
-import base64
 import threading
 import tornado.web
 import tornado.websocket
@@ -17,48 +16,17 @@ gflags.DEFINE_string("ui_server_url", "http://localhost:5001", "ui_server_url")
 FLAGS = gflags.FLAGS
 
 
-class ImageHolder(object):
-    """画像のバッファの入れ物."""
-
-    def __init__(self):
-        self._buffer = dict()
-        self._lock = threading.Lock()
-        with open("./static/img/default.jpg", "rb") as f:
-            self._default_image = f.read()
-
-    @staticmethod
-    def instance():
-        if not hasattr(ImageHolder, "_instance"):
-            ImageHolder._instance = ImageHolder()
-        return ImageHolder._instance
-
-    def push(self, index, buf):
-        """画像の追加."""
-        with self._lock:
-            self._buffer[index] = buf
-
-    def pop(self, index):
-        """画像を取り出し，Noneをセットする"""
-        with self._lock:
-            if index not in self._buffer:
-                return self._default_image
-            buf = self._buffer[index]
-            self._buffer[index] = None
-            return buf
-
-    def default_image(self):
-        return self._default_image
-
-    def del_index(self, index):
-        """キーを削除する"""
-        self._buffer.pop(index)
-
-
 class PopHandlerHolder(object):
+    """Indexに対応するPopHandlerを保存する．
+
+    PushHandler.on_messageでこのholderを通じてwrite_messageする．
+    """
 
     def __init__(self):
         self._handlers = dict()
         self._lock = threading.Lock()
+        with open("./static/img/default.jpg", "rb") as f:
+            self._default_image = f.read()
 
     @staticmethod
     def instance():
@@ -73,6 +41,14 @@ class PopHandlerHolder(object):
 
     def set_handler(self, index, handler):
         self._handlers[index] = handler
+
+    def write_message(self, index, buf, binary=False):
+        handler = self.get_handler(index)
+        if handler:
+            handler.write_message(buf, binary=binary)
+
+    def write_default(self, index):
+        self.write_message(index, self._default_image, binary=True)
 
 
 class HttpHandler(tornado.web.RequestHandler):
@@ -96,26 +72,11 @@ class WSPopHandler(tornado.websocket.WebSocketHandler):
 
     def initialize(self):
         self.state = True
-        self.image_holder = ImageHolder.instance()
         self.index = None
 
     def open(self, index):
-        print index
-        self.index = index
-        # 送信スレッドの作成
-        t = threading.Thread(target=self.loop)
-        t.setDaemon(True)
-        t.start()
+        print "pop:", index
         PopHandlerHolder.instance().set_handler(index, self)
-
-    def loop(self):
-        """メインスレッドと非同期でクライアントに画像を送りつける"""
-        while self.state:
-            pass
-            # buf = self.image_holder.pop(self.index)
-            # if buf:
-            #     self.write_message(buf, binary=True)
-            time.sleep(0.05)
 
     def on_close(self):
         # 映像送信のループを終了させる
@@ -133,8 +94,8 @@ class WSPushHandler(tornado.websocket.WebSocketHandler):
     受け取る方法がわからなかったため）．
     """
     def initialize(self):
-        self.image_holder = ImageHolder.instance()
         self.index = None
+        self.pop_holder = PopHandlerHolder.instance()
 
     def open(self, index):
         print("open: " + self.request.remote_ip)
@@ -142,14 +103,11 @@ class WSPushHandler(tornado.websocket.WebSocketHandler):
 
     def on_message(self, msg):
         buf = base64.b64decode(msg)
-        self.image_holder.push(self.index, buf)
-        handler = PopHandlerHolder.instance().get_handler(self.index)
-        if handler:
-            handler.write_message(buf, binary=True)
+        self.pop_holder.write_message(self.index, buf, binary=True)
 
     def on_close(self):
         self.close()
-        self.image_holder.del_index(self.index)
+        self.pop_holder.write_default()
         print(self.request.remote_ip, ": connection closed")
 
 
