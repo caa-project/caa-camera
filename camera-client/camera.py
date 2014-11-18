@@ -5,7 +5,6 @@ import io
 import gflags
 import time
 import picamera
-import base64
 import sys
 import threading
 import websocket
@@ -56,10 +55,7 @@ class CameraThread():
                 self.camera.stream,
                 "jpeg", use_video_port=True, quality=self.quality):
             self.camera.stream.seek(0)
-            # データの送信．
-            # 鯖側でバイナリでの受信の仕方がわからんかったので
-            # base64にエンコードした．
-            self.ws.send(base64.b64encode(self.camera.stream.read()))
+            self.ws.send(self.camera.stream.read())
             self.camera.stream.seek(0)
             self.camera.stream.truncate()
             if self.stop_event.is_set():
