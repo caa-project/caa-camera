@@ -1,2 +1,2 @@
 python-gflags==2.0
-websocket-client==0.16.0
+websocket-client==0.21.0
