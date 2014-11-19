@@ -1,89 +1,80 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import io
+import gflags
 import time
 import picamera
-import base64
-import sys, io
-import threading
+import sys
 import websocket
 
-def create_camera(width, height, fps):
+FLAGS = gflags.FLAGS
+
+gflags.DEFINE_string("server", None, "e.g. ws://localhost:8000/push")
+gflags.DEFINE_integer("width", 320, "Width of movie.")
+gflags.DEFINE_integer("height", 240, "Height of movie.")
+gflags.DEFINE_integer("fps", 10, "fps")
+gflags.DEFINE_integer("quality", 20, "Quality")
+gflags.DEFINE_bool("vflip", True, "Virtical flip")
+gflags.DEFINE_bool("hflip", True, "Horizontal flip")
+
+
+def create_camera(width, height, vflip, hflip):
     """カメラを適当に設定して作るファクトリ
     """
     camera = picamera.PiCamera()
     camera.resolution = (width, height)
-    camera.framerate = fps
-    camera.stream = io.BytesIO()    #ストリームIO
-    camera.vflip = True             #垂直反転
-    camera.hflip = True             #水平反転
+    camera.vflip = vflip            # 垂直反転
+    camera.hflip = hflip            # 水平反転
     time.sleep(2)
     return camera
 
-class CameraThread():
 
-    def __init__(self, width=640, height=480, fps=10, quality=85):
-        print "initializing camera..."
-        self.stop_event = threading.Event()
-        self.camera = create_camera(width,height,fps)
-        print "done"
+def camera_streaming(ws, camera, fps):
+    """Start sending binary of jpeg images."""
+    stream = io.BytesIO()
+    SPF = 1.0 / fps         # second per frame
+    frames_count = 0        # how many frames are captured (including skips)
+    while True:
+        frames_count += 1
+        start_time = time.time()
 
-        self.quality = quality
-        self.send_thread = threading.Thread(target=self.loop)
-        self.send_thread.setDaemon(True)
+        # campure and send start
+        camera.capture(stream, "jpeg", use_video_port=True,
+                       quality=FLAGS.quality)
+        stream.seek(0)
+        ws.send_binary(stream.read())
+        stream.seek(0)
+        stream.truncate()
+        # campure and send end
 
-    def start(self, ws):
-        self.ws = ws
-        self.send_thread.start()
+        end_time = time.time()
+        # shorten sleeping seconds
+        sec = SPF - (end_time - start_time)
+        sec = sec if sec > 0 else SPF
+        time.sleep(sec)
 
-    def stop(self):
-        self.stop_event.set()
 
-    def loop(self):
-        for foo in self.camera.capture_continuous(\
-                self.camera.stream,\
-                "jpeg", use_video_port=True, quality=self.quality):
-            self.camera.stream.seek(0)
-            #データの送信．
-            #鯖側でバイナリでの受信の仕方がわからんかったのでbase64にエンコードした．
-            self.ws.send(base64.b64encode(self.camera.stream.read()))
-            self.camera.stream.seek(0)
-            self.camera.stream.truncate()
-            if self.stop_event.is_set():
-                break
-
-ct = CameraThread(width=320, height=240, fps=5, quality=20)
-
-def on_message(ws, msg):
-    pass
-
-def on_error(ws, error):
-    print error
-
-def on_open(ws):
-    print "### open ###"
-    ct.start(ws)
-
-def on_close(ws):
-    print "### close ###"
-    ct.stop()
-
-if __name__ == '__main__':
-    server_adress = "localhost:5000"
-    if len(sys.argv) == 2:
-        server_adress = sys.argv[1]
+def main(argv):
+    argv = gflags.FLAGS(argv)
 
     # websocket.enableTrace(True)
     while True:
         try:
-            ws = websocket.WebSocketApp("ws://" + server_adress,
-                                      on_message = on_message,
-                                      on_error = on_error,
-                                      on_close = on_close)
-            ws.on_open = on_open
-            ws.run_forever()
-            time.sleep(1)       #再接続の試行までのインターバル
-            time.sleep(1)       #再接続の試行までのインターバル
+            ws = websocket.create_connection(FLAGS.server)
+            print "Prepare camera"
+            camera = create_camera(FLAGS.width, FLAGS.height,
+                                   FLAGS.vflip, FLAGS.hflip)
+            print "Start streaming"
+            camera_streaming(ws, camera, FLAGS.fps)
+
         except KeyboardInterrupt:
             print "abort"
             break
+        except Exception as e:
+            print str(e)
+            time.sleep(1)       # 再接続の試行までのインターバル
+
+
+if __name__ == '__main__':
+    main(sys.argv)
