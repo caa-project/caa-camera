@@ -35,17 +35,24 @@ def camera_streaming(ws, camera, fps):
     stream = io.BytesIO()
     SPF = 1.0 / fps         # second per frame
     frames_count = 0        # how many frames are captured (including skips)
-    # start_time = time.time()
     while True:
         frames_count += 1
+        start_time = time.time()
+
+        # campure and send start
         camera.capture(stream, "jpeg", use_video_port=True,
                        quality=FLAGS.quality)
         stream.seek(0)
         ws.send_binary(stream.read())
         stream.seek(0)
         stream.truncate()
+        # campure and send end
 
-        time.sleep(SPF)
+        end_time = time.time()
+        # shorten sleeping seconds
+        sec = SPF - (end_time - start_time)
+        sec = sec if sec > 0 else SPF
+        time.sleep(sec)
 
 
 def main(argv):
