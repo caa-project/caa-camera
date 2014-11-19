@@ -30,15 +30,20 @@ def create_camera(width, height, vflip, hflip):
     return camera
 
 
-def camera_streaming(ws, camera):
+def camera_streaming(ws, camera, fps):
+    """Start sending binary of jpeg images."""
     stream = io.BytesIO()
-    SPF = 1.0 / FLAGS.fps   # second per frame
-    for foo in camera.capture_continuous(
+    SPF = 1.0 / fps   # second per frame
+    frames_count = 0        # how many frames are captured (including skips)
+    # start_time = time.time()
+    for _ in camera.capture_continuous(
             stream, "jpeg", use_video_port=True, quality=FLAGS.quality):
+        frames_count += 1
         stream.seek(0)
         ws.send_binary(stream.read())
         stream.seek(0)
         stream.truncate()
+
         time.sleep(SPF)
 
 
@@ -49,9 +54,11 @@ def main(argv):
     while True:
         try:
             ws = websocket.create_connection(FLAGS.server)
-            camera = create_camera(FLAGS.width, FLAGS.height, FLAGS.fps,
+            print "Prepare camera"
+            camera = create_camera(FLAGS.width, FLAGS.height,
                                    FLAGS.vflip, FLAGS.hflip)
-            camera_streaming(ws, camera)
+            print "Start streaming"
+            camera_streaming(ws, camera, FLAGS.fps)
 
         except KeyboardInterrupt:
             print "abort"
