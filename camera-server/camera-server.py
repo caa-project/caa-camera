@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import base64
 import gflags
 import os
 import sys
@@ -95,9 +94,7 @@ class WSPushHandler(tornado.websocket.WebSocketHandler):
     """Piからの画像を受け取るハンドラ
 
     /push に対応．
-
-    画像はbase64でエンコードされて送られてくる（on_messageでバイナリで
-    受け取る方法がわからなかったため）．
+    送られてきたバイナリをそのまま送りつける
     """
     def initialize(self):
         self.index = None
@@ -108,8 +105,7 @@ class WSPushHandler(tornado.websocket.WebSocketHandler):
         self.index = index
 
     def on_message(self, msg):
-        buf = base64.b64decode(msg)
-        self.pop_holder.write_message(self.index, buf, binary=True)
+        self.pop_holder.write_message(self.index, msg, binary=True)
 
     def on_close(self):
         self.pop_holder.write_default()
