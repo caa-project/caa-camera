@@ -33,12 +33,13 @@ def create_camera(width, height, vflip, hflip):
 def camera_streaming(ws, camera, fps):
     """Start sending binary of jpeg images."""
     stream = io.BytesIO()
-    SPF = 1.0 / fps   # second per frame
+    SPF = 1.0 / fps         # second per frame
     frames_count = 0        # how many frames are captured (including skips)
     # start_time = time.time()
-    for _ in camera.capture_continuous(
-            stream, "jpeg", use_video_port=True, quality=FLAGS.quality):
+    while True:
         frames_count += 1
+        camera.capture(stream, "jpeg", use_video_port=True,
+                       quality=FLAGS.quality)
         stream.seek(0)
         ws.send_binary(stream.read())
         stream.seek(0)
