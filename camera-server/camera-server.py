@@ -121,7 +121,6 @@ class URLHandler(tornado.web.RequestHandler):
         try:
             # Ask ui_server
             ui_url = FLAGS.ui_server_url + "/url/" + index
-            print ui_url
             url_res = urllib2.urlopen(ui_url)
             response = json.loads(url_res.read())
             response["success"] = True
