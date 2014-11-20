@@ -4,20 +4,13 @@
 <link href="/static/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-<h1>Robot {{index}}</h1>
 
 <div class="row">
-  <div class="col-sm-6">
+  <div class="col-sm-8">
+    <h1>Robot {{index}}</h1>
     <img id="liveImg" src="/static/img/default.jpg" width="640" height="480">
   </div>
-<!-- <div> -->
-<!-- <form method="post" class="form&#45;horizontal" onsubmit="return false"> -->
-<!--   <input name="message" size=80 type="TEXT"></input> -->
-<!--   <button type="submit" class="btn btn&#45;primary">送信</button> -->
-<!-- </form> -->
-<!-- </div> -->
-  <div class="col-sm-6">
-    <input id="qrButton" type="button" class="btn btn-default" value="QRコードを表示"></input>
+  <div class="col-sm-4">
     <div id="qrCanvas"></div>
   </div>
 </div>

@@ -46,8 +46,11 @@ function getQRCode() {
         var url = data['url'];
         var qrcode = "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=" + url;
         $('#qrCanvas').empty();
-        $('#qrCanvas').append($('<img>').attr('src', qrcode));
+        $('#qrCanvas').append(
+          $('<h1>').html('↓読み取ってね！'),
+          $('<img>').attr('src', qrcode));
       } else {
+        $('#qrCanvas').append($('<h1>').html('準備中'));
         console.log(data['reason']);
       }
     }});
@@ -90,5 +93,5 @@ function encode (input) {
 $(function() {
   prepareWebSocket();
 
-  $('#qrButton').click(getQRCode);
+  setInterval(getQRCode, 1000);
 });
