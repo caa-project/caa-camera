@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import gflags
+import json
 import os
 import sys
 import threading
@@ -110,6 +111,14 @@ class WSPushHandler(tornado.websocket.WebSocketHandler):
     def on_close(self):
         self.pop_holder.write_default(self.index)
         print(self.request.remote_ip, ": connection closed")
+
+
+class URLHandler(tornado.web.RequestHandler):
+
+    def post(self):
+        index = self.get_argument("index")
+        response = json.loads(FLAGS.ui_server_url + "/url?index=%s" % index)
+        self.write(response)
 
 
 def main(argv):

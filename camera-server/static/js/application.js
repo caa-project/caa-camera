@@ -36,8 +36,10 @@ function prepareWebSocket() {
  * QR code
  */
 function getQRCode() {
+  var url = location.href.match( /\/\/[^\/]+/ )[0].substr(2) + "/url?index=" + INDEX;
   $.ajax({
-    url: UI_SERVER_URL + "/url/" + INDEX,
+    type: 'POST'
+    url: url,
     data: {},
     success: function(data) {
       var url = data['url'];
