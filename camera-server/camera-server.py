@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import gflags
+import json
 import os
 import sys
+import urllib2
 import threading
 import tornado.web
 import tornado.websocket
@@ -112,6 +114,21 @@ class WSPushHandler(tornado.websocket.WebSocketHandler):
         print(self.request.remote_ip, ": connection closed")
 
 
+class URLHandler(tornado.web.RequestHandler):
+
+    def post(self):
+        index = self.get_argument("index")
+        try:
+            # Ask ui_server
+            ui_url = FLAGS.ui_server_url + "/url/" + index
+            url_res = urllib2.urlopen(ui_url)
+            response = json.loads(url_res.read())
+            response["success"] = True
+        except Exception as e:
+            response = dict(success=False, reason=str(e))
+        self.write(response)
+
+
 def main(argv):
     argv = gflags.FLAGS(argv)
     print("start!")
@@ -122,6 +139,7 @@ def main(argv):
         (r"/watch/([0-9a-zA-Z]+)", HttpHandler),
         (r"/pop/([0-9a-zA-Z]+)", WSPopHandler),
         (r"/push/([0-9a-zA-Z]+)", WSPushHandler),
+        (r"/url", URLHandler),
     ]
     settings = dict(
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
