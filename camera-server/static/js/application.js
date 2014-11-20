@@ -36,16 +36,20 @@ function prepareWebSocket() {
  * QR code
  */
 function getQRCode() {
-  var url = location.href.match( /\/\/[^\/]+/ )[0].substr(2) + "/url?index=" + INDEX;
+  var url = "/url?index=" + INDEX;
   $.ajax({
     type: 'POST',
     url: url,
     data: {},
     success: function(data) {
-      var url = data['url'];
-      var qrcode = "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=" + url;
-      $('#qrCanvas').empty();
-      $('#qrCanvas').append($('<img>').attr('src', qrcode));
+      if (data['success']) {
+        var url = data['url'];
+        var qrcode = "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=" + url;
+        $('#qrCanvas').empty();
+        $('#qrCanvas').append($('<img>').attr('src', qrcode));
+      } else {
+        console.log(data['reason']);
+      }
     }});
 }
 
