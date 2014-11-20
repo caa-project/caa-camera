@@ -123,7 +123,11 @@ class URLHandler(tornado.web.RequestHandler):
             ui_url = FLAGS.ui_server_url + "/url/" + index
             url_res = urllib2.urlopen(ui_url)
             response = json.loads(url_res.read())
-            response["success"] = True
+            if "url" in response and response["url"]:
+                response["success"] = True
+            else:
+                response = dict(success=False, reason="empty url")
+
         except Exception as e:
             response = dict(success=False, reason=str(e))
         self.write(response)
