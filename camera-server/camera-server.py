@@ -108,7 +108,7 @@ class WSPushHandler(tornado.websocket.WebSocketHandler):
         self.pop_holder.write_message(self.index, msg, binary=True)
 
     def on_close(self):
-        self.pop_holder.write_default()
+        self.pop_holder.write_default(self.index)
         print(self.request.remote_ip, ": connection closed")
 
 
