@@ -42,10 +42,10 @@ function getQRCode() {
     url: url,
     data: {},
     success: function(data) {
+      $('#qrCanvas').empty();
       if (data['success']) {
         var url = data['url'];
         var qrcode = "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=" + url;
-        $('#qrCanvas').empty();
         $('#qrCanvas').append(
           $('<h1>').html('↓読み取ってね！'),
           $('<img>').attr('src', qrcode));
