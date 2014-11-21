@@ -56,6 +56,28 @@ function getQRCode() {
     }});
 }
 
+/**
+ * Say
+ */
+function postSay() {
+  var url = "/say"
+  $.ajax({
+    type: 'POST',
+    url: url,
+    data: {
+      index: INDEX,
+      q: $('#say_q').val()
+    },
+    success: function(data) {
+      $('#say_q').val('');
+      console.log(data);
+      $('#say_error').empty();
+      if (!data['success']) {
+        $('#say_error').text("エラー(´・ω・｀)");
+      }
+    }});
+}
+
 
 /**
  * base64 encode
@@ -92,6 +114,8 @@ function encode (input) {
 
 $(function() {
   prepareWebSocket();
+
+  $('#say_submit').click(postSay);
 
   setInterval(getQRCode, 1000);
 });

@@ -140,7 +140,7 @@ class SayHandler(tornado.web.RequestHandler):
             index = self.get_argument("index")
             q = self.get_argument("q")
 
-            say_url = FLAGS.ui_server_url + "/say?index=%s&q=%s" & (index, q)
+            say_url = FLAGS.ui_server_url + "/say?index=%s&q=%s" % (index, q)
             print say_url
             res = urllib2.urlopen(say_url)
             response = json.loads(res.read())
