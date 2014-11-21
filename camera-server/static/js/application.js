@@ -70,7 +70,6 @@ function postSay() {
     },
     success: function(data) {
       $('#say_q').val('');
-      console.log(data);
       $('#say_error').empty();
       if (!data['success']) {
         $('#say_error').text("エラー(´・ω・｀)");

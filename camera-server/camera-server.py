@@ -12,7 +12,10 @@ import tornado.websocket
 import tornado.httpserver
 
 gflags.DEFINE_integer("port", None, "port the server listen on")
-gflags.DEFINE_string("ui_server_url", "http://localhost:5001", "ui_server_url")
+gflags.DEFINE_string("control_server_url", "http://localhost:5000",
+                     "DO NOT ENDS WITH '/' ! control_server_url")
+gflags.DEFINE_string("ui_server_url", "http://localhost:5001",
+                     "DO NOT ENDS WITH '/'! ui_server_url")
 
 FLAGS = gflags.FLAGS
 
@@ -140,7 +143,8 @@ class SayHandler(tornado.web.RequestHandler):
             index = self.get_argument("index")
             q = self.get_argument("q")
 
-            say_url = FLAGS.ui_server_url + "/say?index=%s&q=%s" % (index, q)
+            say_url = FLAGS.control_server_url + "/say?index=%s&q=%s" % (index,
+                                                                         q)
             res = urllib2.urlopen(say_url)
             response = json.loads(res.read())
         except Exception as e:
