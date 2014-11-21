@@ -133,6 +133,21 @@ class URLHandler(tornado.web.RequestHandler):
         self.write(response)
 
 
+class SayHandler(tornado.web.RequestHandler):
+
+    def post(self):
+        try:
+            index = self.get_argument("index")
+            q = self.get_argument("q")
+
+            say_url = FLAGS.ui_server_url + "/say?index=%s&q=%s" & (index, q)
+            res = urllib2.urlopen(say_url)
+            response = json.loads(res.read())
+        except Exception as e:
+            response = dict(success=False, reason=str(e))
+        self.write(response)
+
+
 def main(argv):
     argv = gflags.FLAGS(argv)
     print("start!")
