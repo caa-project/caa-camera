@@ -147,7 +147,7 @@ class SayHandler(tornado.web.RequestHandler):
             q = urllib.quote(q.encode("utf-8"))
             say_url = FLAGS.control_server_url + "/say?index=%s&q=%s" % (index,
                                                                          q)
-            res = urllib2.urlopen(say_url.encode("utf-8"))
+            res = urllib2.urlopen(say_url)
             response = json.loads(res.read())
         except Exception as e:
             response = dict(success=False, reason=str(e), at="camera")
